@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Galaxy;
+use App\Entity\DirectusFiles;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -40,4 +41,37 @@ class GalaxyRepository extends ServiceEntityRepository
     //            ->getOneOrNullResult()
     //        ;
     //    }
+
+    public function findAllWithFiles(): array{
+
+        $queryResults = $this->createQueryBuilder('galaxy')
+            ->select('galaxy.id, galaxy.title, galaxy.description, galaxy.modele')
+            ->addSelect('file.id as file_id, file.filename_disk')
+            ->innerJoin('App\Entity\Modeles', 'modele', 'WITH', 'modele.id = galaxy.modele')
+            ->innerJoin('App\Entity\ModelesFiles', 'modelesFiles', 'WITH', 'modelesFiles.modeles_id = modele.id')
+            ->innerJoin('App\Entity\DirectusFiles', 'file', 'WITH', 'file.id = modelesFiles.directus_files_id')
+            ->orderBy('galaxy.id', 'ASC')
+            ->addOrderBy('file.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        $carouselItems = [];
+        foreach ($queryResults as $resultRow) {
+            $galaxyId = $resultRow['id'];
+            
+            if (!isset($carouselItems[$galaxyId])) {
+                $carouselItems[$galaxyId] = [
+                    'title' => $resultRow['title'],
+                    'description' => $resultRow['description'],
+                    'files' => []
+                ];
+            }
+            
+            $carouselItems[$galaxyId]['files'][] = [
+                'filename_disk' => $resultRow['filename_disk']
+            ];
+        }
+        
+        return array_values($carouselItems);
+    }
 }

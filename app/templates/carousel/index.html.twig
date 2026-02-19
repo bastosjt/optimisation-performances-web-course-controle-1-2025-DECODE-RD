@@ -4,6 +4,10 @@
 
 {% block body %}
 
+	{% if carousel|length > 0 and carousel[0].files|length > 0 %}
+		<link rel="preload" href="{{ asset('img/' ~ carousel[0].files[0].filename_disk) }}" as="image">
+	{% endif %}
+
 <div class="flex flex-col items-center space-y-12 w-11/12">
 	<section class="flex flex-col items-center justify-center w-11/12 space-y-6">
 		<h1 class="text-5xl text-center">Bienvenue dans la Galaxie Boissières</h1>
@@ -16,13 +20,20 @@
 			{{item.description | raw}}
 		</div>
 		<div class="flex flex-col items-center justify-center w-5/12 space-y-6">
-			
-			<img src="{{asset('img/' ~ item.files[0].filename_disk)}}" class="w-full h-[640px] object-cover">
+			{% if item.files|length > 0 %}
+
+				{% if loop.first %}
+					<img src="{{asset('img/' ~ item.files[0].filename_disk)}}" alt="{{ item.title }}" class="w-full h-[640px] object-cover">
+				{% else %}
+				
+					<img src="{{asset('img/' ~ item.files[0].filename_disk)}}" alt="{{ item.title }}" loading="lazy" class="w-full h-[640px] object-cover">
+				{% endif %}
+			{% endif %}
 
 			<div class="flex flex-row items-center justify-center space-x-6">
 				{% for file in item.files %}
 					{% if loop.index0 != 0 %}
-						<img src="{{asset('img/' ~ file.filename_disk)}}" class="w-full max-h-14 object-cover">
+						<img src="{{asset('img/' ~ file.filename_disk)}}" alt="{{ item.title }} - Image {{ loop.index }}" loading="lazy" class="w-full max-h-14 object-cover">
 					{% endif%}
 				{% endfor%}
 			</div>

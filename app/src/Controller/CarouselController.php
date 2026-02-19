@@ -2,44 +2,31 @@
 
 namespace App\Controller;
 
-use App\Repository\DirectusFilesRepository;
 use App\Repository\GalaxyRepository;
-use App\Repository\ModelesFilesRepository;
-use App\Repository\ModelesRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
 
 final class CarouselController extends AbstractController
 {
     #[Route('/carousel', name: 'app_carousel')]
-    public function index(GalaxyRepository $galaxyRepository, ModelesRepository $modelesRepository, ModelesFilesRepository $modelesFilesRepository, DirectusFilesRepository $directusFilesRepository): Response
+    public function index(GalaxyRepository $galaxyRepository, CacheInterface $cache): Response
     {
-        $galaxies = $galaxyRepository->findAll();
-        $carousel = [];
-
-        foreach($galaxies as $galaxy) {
-            $carouselItem = [
-                'title' => $galaxy->getTitle(),
-                'description' => $galaxy->getDescription(),
-            ];
+        $cachePage = 'carousel_page';
+        $htmlContent = $cache->get($cachePage, function (ItemInterface $item) use ($galaxyRepository) {
+            $item->expiresAfter(300);
             
-            $modele = $modelesRepository->find($galaxy->getModele());
-            $modelesFiles = $modelesFilesRepository->findBy([
-                'modeles_id' => $modele->getId()
+            $carousel = $galaxyRepository->findAllWithFiles();
+            return $this->renderView('carousel/index.html.twig', [
+                'carousel' => $carousel
             ]);
-            $files = [];
-
-            foreach($modelesFiles as $modelesFile) {
-                $file = $directusFilesRepository->find($modelesFile->getDirectusFilesId());
-                $files[] = $file;
-            }
-            $carouselItem['files'] = $files;
-            $carousel[] = $carouselItem;
-        }
+        });
         
-        return $this->render('carousel/index.html.twig', [
-            'carousel' => $carousel
-        ]);
+        $response = new Response($htmlContent);
+        $response->headers->set('Cache-Control', 'public, max-age=300');
+        
+        return $response;
     }
 }
